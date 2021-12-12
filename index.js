@@ -1,55 +1,27 @@
-const fetchBob = (authKey, url, opts) => require('node-fetch')(url, Object.assign({}, opts, {
-    headers: Object.assign({}, opts?.headers, {
-        'Authorization': authKey
-    })
-}));
+const http = require('http');
+const app = require('express')();
 
+const bob = require('./src/bob');
+const print = require('./src/print');
 
-(async () => {
-
+app.get('/:key/:day?', async (req, res) => {
     try {
-        const people = await (await fetchBob('esfRezXC7CUQKwIUQg0Xl9rprlM1ZFNGf37M6t6T', 'https://api.hibob.com/v1/people')).json();
-        const daysOff = await (await fetchBob('esfRezXC7CUQKwIUQg0Xl9rprlM1ZFNGf37M6t6T', 'https://api.hibob.com/v1/timeoff/outtoday')).json();
-        const map = people.employees.reduce((res, next) => {
-            res[next.id] = {
-                name: next.fullName,
-                site: next.work.site,
-                details: next,
-            };
-            return res;
-        }, {});
-        daysOff.outs.forEach(out => {
-            map[out.employeeId].outReason = out.policyTypeDisplayName;
-        })
-        const sitesStatus = Object.values(map).reduce((res, next) => {
-            res[next.site] = res[next.site] || {in: [], out: []};
-            if (next.outReason) {
-                res[next.site].out.push(next.details.fullName.padEnd(40) + `(${next.outReason})`);
-            } else {
-                res[next.site].in.push(next.details.fullName);
-            }
-            return res;
-        }, {});
-        prettyPrint(sitesStatus);
+        const status = await bob.fetchPeopleOut(req.params.key, req.params.day);
+        const table = print.getStatusTable(status);
+        res.send(print.prettyPrint(table));
     } catch (e) {
-        console.error(e);
-        console.error(await e.json());
+        res.status(500).send(print.prettyPrint(e.message));
     }
+});
 
-})();
+app.use((req, res) => {
+    res.status(404).send(print.prettyPrint(`
+1. Go to hibob.com, click your user in top right corner and click "API access".
+2. If you have it, click "Generate token".
+3. Check "Full employee read" and "Timeoff submit request & read who's out".
+4. Copy api token.
+5. Get back here and go to url/api_key to see who's off today or /api_key/YYYY-MM-DD to see specified date (and replace api_key with your key).
+    `));
+})
 
-function prettyPrint(status) {
-    Object.keys(status).forEach(name => {
-        const site = status[name];
-        console.log(`** ${name} `.padEnd(120, '*'));
-        prettyPrintLine('IN', 'OUT');
-        for (let i = 0; i < Math.max(site.in.length, site.out.length); i++) {
-            prettyPrintLine(site.in[i] ?? '', site.out[i] ?? '')
-        }
-        console.log('');
-    });
-}
-
-function prettyPrintLine(cell1, cell2) {
-    console.log(`** ${cell1}`.padEnd(30) + `|  ${cell2}`.padEnd(88) + '**')
-}
+http.createServer(app).listen(80, () => console.log('Server successfully started'))
