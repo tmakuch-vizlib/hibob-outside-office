@@ -23,7 +23,7 @@ app.use((req, res) => {
 2. If you have it, click "Generate token".
 3. Check "Full employee read" and "Timeoff submit request & read who's out".
 4. Copy api token.
-5. Get back here and go to url https://hibob-outside-office.vercel.app//api_key to see who's off today or https://hibob-outside-office.vercel.app/api_key/YYYY-MM-DD to see specified date (and replace api_key with your key).
+5. Get back here and go to url https://hibob-outside-office.vercel.app/api_key to see who's off today or https://hibob-outside-office.vercel.app/api_key/YYYY-MM-DD to see specified date (and replace api_key with your key).
     `));
 })
 
